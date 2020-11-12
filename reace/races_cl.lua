@@ -111,12 +111,12 @@ AddEventHandler("StreetRaces:loadRace_cl", function(checkpoints)
     recordedCheckpoints = checkpoints
     raceStatus.state = RACE_STATE_RECORDING
 
-    -- Add map blips
+    -- Add map blips COME BACK HERE
     for index, checkpoint in pairs(recordedCheckpoints) do
         checkpoint.blip = N_0x554d9d53f696d002(1664425300, checkpoint.coords.x, checkpoint.coords.y, checkpoint.coords.z)
         SetBlipSprite(checkpoint.blip, 1116438174, 1)
 		SetBlipScale(checkpoint.blip, 0.2)
-		Citizen.InvokeNative(0x9CB1A1623062F402, checkpoint.blip, "check point")
+		Citizen.InvokeNative(0x9CB1A1623062F402, checkpoint.blip, "checkpoint")
 
     end
 
@@ -145,7 +145,7 @@ AddEventHandler("StreetRaces:joinedRace_cl", function(index)
         checkpoint.blip = N_0x554d9d53f696d002(1664425300, checkpoint.coords.x, checkpoint.coords.y, checkpoint.coords.z)
         SetBlipSprite(checkpoint.blip, 1116438174, 1)
 		SetBlipScale(checkpoint.blip, 0.2)
-		Citizen.InvokeNative(0x9CB1A1623062F402, checkpoint.blip, "check point")
+		Citizen.InvokeNative(0x9CB1A1623062F402, checkpoint.blip, "checkpoint")
     end
 
     -- Clear waypoint and add route for first checkpoint blip
@@ -265,10 +265,12 @@ Citizen.CreateThread(function()
                     local timeSeconds = (GetGameTimer() - race.startTime)/1000.0
                     local timeMinutes = math.floor(timeSeconds/60.0)
                     timeSeconds = timeSeconds - 60.0*timeMinutes
-                    Draw2DText(config_cl.hudPosition.x, config_cl.hudPosition.y, ("~y~%02d:%06.3f"):format(timeMinutes, timeSeconds), 0.7)
+                    --Draw2DText(config_cl.hudPosition.x, config_cl.hudPosition.y, ("~y~%02d:%06.3f"):format(timeMinutes, timeSeconds), 0.7)
+                    DrawTxt(("~y~%02d:%06.3f"):format(timeMinutes, timeSeconds), config_cl.hudPosition.x, config_cl.hudPosition.y, 0.7, 0.7, true, 255, 255, 255, 255, true)
                     local checkpoint = race.checkpoints[raceStatus.checkpoint]
                     local checkpointDist = math.floor(GetDistanceBetweenCoords(position.x, position.y, position.z, checkpoint.coords.x, checkpoint.coords.y, 0, false))
-                    Draw2DText(config_cl.hudPosition.x, config_cl.hudPosition.y + 0.04, ("~y~CHECKPOINT %d/%d (%dm)"):format(raceStatus.checkpoint, #race.checkpoints, checkpointDist), 0.5)
+                    --Draw2DText(config_cl.hudPosition.x, config_cl.hudPosition.y + 0.04, ("~y~CHECKPOINT %d/%d (%dm)"):format(raceStatus.checkpoint, #race.checkpoints, checkpointDist), 0.5)
+                    DrawTxt(("~y~CHECKPOINT %d/%d (%dm)"):format(raceStatus.checkpoint, #race.checkpoints, checkpointDist), config_cl.hudPosition.x, config_cl.hudPosition.y + 0.04, 0.7, 0.7, true, 255, 255, 255, 255, true)
                 end 
             -- Player has joined a race
             elseif raceStatus.state == RACE_STATE_JOINED then
@@ -283,7 +285,8 @@ Citizen.CreateThread(function()
                     FreezeEntityPosition(vehicle, false)
                 elseif count <= config_cl.freezeDuration then
                     -- Display countdown text and freeze vehicle position
-                    Draw2DText(0.5, 0.4, ("~y~%d"):format(math.ceil(count/1000.0)), 3.0)
+                    --Draw2DText(0.5, 0.4, ("~y~%d"):format(math.ceil(count/1000.0)), 3.0)
+                    DrawTxt(("~y~%d"):format(math.ceil(count/1000.0)), 0.5, 0.4, 3.0, 3.0, true, 255, 255, 255, 255, true)
                     FreezeEntityPosition(vehicle, true)
                 else
                     -- Draw 3D start time and join text
@@ -419,41 +422,44 @@ end
 
 -- Draw 3D text at coordinates
 function DrawText3D(x, y, z, text)
-    -- Check if coords are visible and get 2D screen coords
-    local onScreen, _x, _y = World3dToScreen2d(x, y, z)
+    local onScreen,_x,_y=GetScreenCoordFromWorldCoord(x, y, z)
+    local px,py,pz=table.unpack(GetGameplayCamCoord())  
+    local dist = GetDistanceBetweenCoords(px,py,pz, x,y,z, 1)
+    local str = CreateVarString(10, "LITERAL_STRING", text, Citizen.ResultAsLong())
     if onScreen then
-        -- Calculate text scale to use
-        local dist = GetDistanceBetweenCoords(GetGameplayCamCoords(), x, y, z, 1)
-        local scale = 1.8*(1/dist)*(1/GetGameplayCamFov())*100
-
-        -- Draw text on screen
-        SetTextScale(scale, scale)
-        SetTextFont(4)
-        SetTextProportional(1)
-        SetTextColour(255, 255, 255, 255)
-        SetTextDropShadow(0, 0, 0, 0,255)
-        SetTextDropShadow()
-        SetTextEdge(4, 0, 0, 0, 255)
-        SetTextOutline()
-        SetTextEntry("STRING")
+        SetTextScale(0.30, 0.30)
+        SetTextFontForCurrentCommand(1)
+        SetTextColor(255, 255, 255, 215)
         SetTextCentre(1)
-        AddTextComponentString(text)
-        DrawText(_x, _y)
+        DisplayText(str,_x,_y)
+        local factor = (string.len(text)) / 225
+        DrawSprite("feeds", "hud_menu_4a", _x, _y+0.0125,0.015+ factor, 0.03, 0.1, 35, 35, 35, 190, 0)
+        --DrawSprite("feeds", "toast_bg", _x, _y+0.0125,0.015+ factor, 0.03, 0.1, 100, 1, 1, 190, 0)
     end
 end
 
 -- Draw 2D text on screen
-function Draw2DText(x, y, text, scale)
+--function Draw2DText(x, y, text, scale)
     -- Draw text on screen
-    SetTextFont(4)
-    SetTextProportional(7)
-    SetTextScale(scale, scale)
-    SetTextColour(255, 255, 255, 255)
-    SetTextDropShadow(0, 0, 0, 0,255)
-    SetTextDropShadow()
-    SetTextEdge(4, 0, 0, 0, 255)
-    SetTextOutline()
-    SetTextEntry("STRING")
-    AddTextComponentString(text)
-    DrawText(x, y)
+   -- SetTextFont(4)
+   -- SetTextProportional(7)
+   -- SetTextScale(scale, scale)
+   -- SetTextColour(255, 255, 255, 255)
+   -- SetTextDropShadow(0, 0, 0, 0,255)
+   -- SetTextDropShadow()
+   -- SetTextEdge(4, 0, 0, 0, 255)
+   -- SetTextOutline()
+   -- SetTextEntry("STRING")
+  --  AddTextComponentString(text)
+--    DrawText(x, y)
+--end
+
+function DrawTxt(str, x, y, w, h, enableShadow, col1, col2, col3, a, centre)
+    local str = CreateVarString(10, "LITERAL_STRING", str, Citizen.ResultAsLong())
+   SetTextScale(w, h)
+   SetTextColor(math.floor(col1), math.floor(col2), math.floor(col3), math.floor(a))
+   SetTextCentre(centre)
+   if enableShadow then SetTextDropshadow(1, 0, 0, 0, 255) end
+   Citizen.InvokeNative(0xADA9255D, 10);
+   DisplayText(str, x, y)
 end
